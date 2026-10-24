@@ -18,13 +18,13 @@ Only **team leaders** and **jury** log in and vote. Organizers manage people and
 
 ## Setup
 1. Free sheet access without Google Cloud: sheet -> Extensions -> Apps Script, paste `apps-script/Code.gs`, set SECRET, Deploy as Web app (Execute as: Me, Access: Anyone). Put the URL and SECRET in `.env` (`GOOGLE_SCRIPT_URL`, `GOOGLE_SCRIPT_SECRET`). Alternative: Google Cloud service account (`GOOGLE_SHEET_ID`, `GOOGLE_SERVICE_ACCOUNT_EMAIL`, `GOOGLE_PRIVATE_KEY`).
-2. `cp .env.example .env` and fill it (MONGODB_URI, JWT_SECRET, ADMIN_DELETE_HASH, CORS_ORIGIN...). For the Falling Sun site, allow `https://fallingsun2026.vercel.app` in `CORS_ORIGIN`.
+2. `cp .env.example .env` and fill it (MONGODB_URI, JWT_SECRET, ADMIN_DELETE_HASH, CORS_ORIGIN, FRONTEND_URL...). Set `FRONTEND_URL` to the public Vercel frontend URL (defaults to `https://fuck-fallingsun.vercel.app`) and allow that same origin in `CORS_ORIGIN`.
 3. `npm install && npm start`. Check `GET /api/health`.
 Local test without Google: `LOCAL_SHEET_FILE=./sheet.example.json`.
 
 ## Flow
 1. Person gets email + invite code from organizers -> `POST /api/auth/register` (once) -> token. Later `POST /api/auth/login`.
-2. Leader `POST /api/teams` (once). Response has `team_url`; `GET /api/teams/:id/qr.png` is the QR (opens `FRONTEND_URL/team/:id` if set).
+2. Leader `POST /api/teams` (once). Response has `team_url`; `GET /api/teams/:id/qr.png` is the QR and opens the customized public project page at `FRONTEND_URL/team/:id`.
 3. Leaders and jury `POST /api/votes`; jury also `POST /api/votes/presentation`.
 4. `GET /api/leaderboard`.
 5. Robotics: jury scores ideation, then `npm run robotics:finalize -- 20`; eliminated leaders `POST /api/teams/me/transfer`.

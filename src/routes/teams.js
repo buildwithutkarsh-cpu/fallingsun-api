@@ -6,8 +6,7 @@ const { requireAuth, requireRole } = require('../middleware/auth');
 const { HttpError, bad, str, objectId, isUniqueError } = require('../utils');
 
 const baseUrl = (req) => process.env.BASE_URL || `${req.protocol}://${req.get('host')}`;
-// If a separate frontend exists (FRONTEND_URL), the QR opens its team page, otherwise the API JSON of the team
-const teamLink = (req, id) => (process.env.FRONTEND_URL ? `${process.env.FRONTEND_URL.replace(/\/$/, '')}/team/${id}` : `${baseUrl(req)}/api/teams/${id}`);
+const teamLink = (req, id) => `${(process.env.FRONTEND_URL || 'https://fuck-fallingsun.vercel.app').replace(/\/$/, '')}/team/${id}`;
 
 // Registration form. Only a logged-in leader (from the sheet) can fill it, once.
 router.post('/', requireAuth, requireRole('leader'), async (req, res) => {
