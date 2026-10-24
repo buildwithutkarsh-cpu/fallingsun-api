@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Team</title><link rel="stylesheet" href="/style.css"></head>
+<body><div class="wrap">
+<div id="nav"></div>
+<div id="content">Loading...</div>
+<div id="actions"></div>
+</div>
+<script src="/app.js"></script>
+<script>
+const id = location.pathname.split('/').pop();
+const left = (d) => 'Saved. Edits left: ' + d.submissions_left;
+(async () => {
+  const u = await renderNav();
+  const box = document.getElementById('content');
+  const a = document.getElementById('actions');
+  try {
+    const [t, cfg] = await Promise.all([api('/teams/' + id), api('/config')]);
+    document.title = t.name;
+    const tr = t.tracks.map((x) => esc(x.kind === 'tool' ? cfg.TOOLS[x.track] : cfg.SKILL_TRACKS[x.track]) + (x.completed ? ' (done)' : '')).join(', ');
+    box.innerHTML = '<h1>' + esc(t.name) + '</h1>' +
+      '<div class="box"><h2>' + esc(t.project_title) + '</h2><p>Category: ' + t.category + '</p><p>' + esc(t.description) + '</p>' +
+      (t.link ? '<p>Link: <a href="' + esc(t.link) + '" target="_blank">' + esc(t.link) + '</a></p>' : '') + '</div>' +
+      '<div class="box"><p>Members: ' + t.members.map((m) => esc(m.name) + (m.role === 'leader' ? ' (leader)' : '')).join(', ') + '</p><p>Tracks: ' + tr + '</p></div>' +
+      '<div class="box"><p>Team QR code:</p><img src="/api/teams/' + t.id + '/qr.png" width="160" height="160"></div>';
+
+    if (!u) { a.innerHTML = '<p><a href="/login.html">Login</a> to vote for this project.</p>'; return; }
+
+    let block = null; // reason a leader cannot vote
+    if (u.role === 'leader') {
+      if (!u.team) block = 'Register your team first to vote.';
+      else if (u.team.id === t.id) block = 'This is your own project. You cannot vote for it.';
+      else if (u.team.status === 'robotics_eliminated') block = 'Your team was eliminated from robotics. Transfer to web or game from the Projects page.';
+      else if (cfg.LEADER_SAME_CATEGORY_ONLY && u.team.category !== t.category) block = 'As a ' + u.team.category + ' team leader you can only vote for ' + u.team.category + ' projects.';
+    }
+    if (block) { a.innerHTML = '<div class="box">' + esc(block) + '</div>'; return; }
+
+    const note = '<p>One vote counts per project. You can submit up to ' + cfg.MAX_SUBMISSIONS + ' times.</p>';
+    const mine = await api('/votes/mine');
+    const prev = mine.votes.find((v) => v.team_id === t.id);
+
+    if (u.role === 'jury') {
+      const pm = await api('/votes/presentation/mine');
+      const pp = pm.scores.find((s) => s.team_id === t.id);
+      a.innerHTML = '<div class="box"><h2>Presentation score</h2><p>Give a score out of 5 after the 3 minute pitch.</p><div id="pf"></div></div>';
+      const pf = document.getElementById('pf');
+      pf.innerHTML = '<div class="row">Score (0-5): <input type="number" min="0" max="5" id="ps" style="width:50px" value="' + (pp ? pp.score : '') + '"></div><button id="pb">Submit</button><div class="msg" id="pm"></div>';
+      document.getElementById('pb').onclick = async () => {
+        const m = document.getElementById('pm'), v = document.getElementById('ps').value;
+        if (v === '') { m.textContent = 'Enter a score'; return; }
+        try { m.textContent = left(await api('/votes/presentation', 'POST', { team_id: t.id, score: Number(v) })); } catch (e) { m.textContent = e.message; }
+      };
+      a.innerHTML += '<div class="box"><h2>Rating</h2>' + note + '<div id="vf"></div></div>';
+    } else {
+      a.innerHTML = '<div class="box"><h2>Your vote</h2>' + note + '<div id="vf"></div></div>';
+    }
+    scoreForm(document.getElementById('vf'), cfg.CRITERIA[t.category], prev && prev.scores, prev ? 'Update vote' : 'Submit vote',
+      async (s) => left(await api('/votes', 'POST', { team_id: t.id, scores: s })));
+
+    if (u.role === 'jury' && t.category === 'robotics' && t.status === 'active') {
+      a.innerHTML += '<div class="box"><h2>Robotics ideation round</h2><div id="if"></div></div>';
+      scoreForm(document.getElementById('if'), cfg.IDEATION, null, 'Submit ideation score',
+        async (s) => { await api('/robotics/ideation', 'POST', { team_id: t.id, scores: s }); });
+    }
+  } catch (e) { box.textContent = e.message; }
+})();
+</script>
+</body></html>

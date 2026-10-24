@@ -1,0 +1,31 @@
+{
+  "Leaders": [
+    {
+      "email": "leader1@example.com",
+      "name": "Aarav"
+    },
+    {
+      "email": "leader2@example.com",
+      "name": "Diya"
+    }
+  ],
+  "Jury": [
+    {
+      "email": "jury1@example.com",
+      "name": "Jury One"
+    }
+  ],
+  "Trial": [
+    {
+      "team": "Team Alpha",
+      "track": "video_editing",
+      "completed": "TRUE"
+    }
+  ],
+  "Settings": [
+    {
+      "key": "voting_open",
+      "value": "TRUE"
+    }
+  ]
+}

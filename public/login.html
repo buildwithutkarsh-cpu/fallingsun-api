@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Login</title><link rel="stylesheet" href="/style.css"></head>
+<body><div class="wrap">
+<div id="nav"></div>
+<h1>Login</h1>
+<p id="description">Team leaders and jury. Sign in with your email and password.</p>
+<form id="authForm">
+  <div class="row">Email<br><input id="email" type="email" autocomplete="email" required></div>
+  <div class="row">Password<br><input id="password" type="password" autocomplete="current-password" minlength="8" maxlength="72" required></div>
+  <div id="confirmRow" class="row" style="display:none">Confirm password<br><input id="confirmPassword" type="password" autocomplete="new-password" minlength="8" maxlength="72"></div>
+  <button id="submit" type="submit">Login</button>
+</form>
+<p><button id="toggle" type="button">Create an account</button></p>
+<p class="msg" id="msg"></p>
+</div>
+<script src="/app.js"></script>
+<script>
+renderNav();
+const msg = document.getElementById('msg');
+const passwordInput = document.getElementById('password');
+const confirmRow = document.getElementById('confirmRow');
+const confirmInput = document.getElementById('confirmPassword');
+let registering = false;
+
+document.getElementById('toggle').onclick = () => {
+  registering = !registering;
+  document.getElementById('description').textContent = registering
+    ? 'Create an account using the email listed for you by the organizers.'
+    : 'Team leaders and jury. Sign in with your email and password.';
+  document.getElementById('submit').textContent = registering ? 'Create account' : 'Login';
+  document.getElementById('toggle').textContent = registering ? 'Back to login' : 'Create an account';
+  passwordInput.autocomplete = registering ? 'new-password' : 'current-password';
+  confirmRow.style.display = registering ? 'block' : 'none';
+  confirmInput.required = registering;
+  msg.textContent = '';
+};
+
+document.getElementById('authForm').onsubmit = async (event) => {
+  event.preventDefault();
+  msg.textContent = '';
+  if (registering && passwordInput.value !== confirmInput.value) {
+    msg.textContent = 'Passwords do not match';
+    return;
+  }
+  try {
+    const d = await api(registering ? '/auth/register' : '/auth/login', 'POST', {
+      email: document.getElementById('email').value,
+      password: passwordInput.value,
+    });
+    localStorage.setItem('token', d.token);
+    const u = await whoami();
+    location.href = u && u.role === 'leader' && !u.team ? '/register.html' : '/projects.html';
+  } catch (e) { msg.textContent = e.message; }
+};
+</script>
+</body></html>

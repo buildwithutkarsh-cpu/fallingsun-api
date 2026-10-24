@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Register Team</title><link rel="stylesheet" href="/style.css"></head>
+<body><div class="wrap">
+<div id="nav"></div>
+<h1>Register Team</h1>
+<div id="gate"></div>
+<div id="form" style="display:none">
+  <div class="row">Team name<br><input id="team_name"></div>
+  <div class="row">Category<br><select id="category"><option value="game">Game</option><option value="web">Web</option><option value="robotics">Robotics</option></select></div>
+  <div class="row">Project title<br><input id="project_title"></div>
+  <div class="row">Description<br><textarea id="description"></textarea></div>
+  <div class="row">Project link (optional)<br><input id="link" placeholder="https://"></div>
+  <div class="row">Other members, one name per line<br><textarea id="members"></textarea></div>
+  <h2>Skill tracks (pick exactly 4)</h2>
+  <div id="skills"></div>
+  <h2>Tool track (pick 1)</h2>
+  <div id="tools"></div>
+  <button id="go">Submit</button>
+  <div class="msg" id="msg"></div>
+</div>
+<div id="result"></div>
+</div>
+<script src="/app.js"></script>
+<script>
+(async () => {
+  const u = await renderNav();
+  const gate = document.getElementById('gate');
+  if (!u) { gate.innerHTML = '<p><a href="/login.html">Login</a> as a team leader to register your team.</p>'; return; }
+  if (u.role !== 'leader') { gate.textContent = 'Only team leaders register teams.'; return; }
+  if (u.team) { gate.innerHTML = '<p>Your team is already registered.</p><p><a href="/team/' + u.team.id + '">Open team page</a></p>'; return; }
+  document.getElementById('form').style.display = 'block';
+  const c = await api('/config');
+  document.getElementById('skills').innerHTML = Object.entries(c.SKILL_TRACKS).map(([k, v]) => '<div class="check"><input type="checkbox" name="skill" value="' + k + '"> ' + esc(v) + '</div>').join('');
+  document.getElementById('tools').innerHTML = Object.entries(c.TOOLS).map(([k, v]) => '<div class="check"><input type="radio" name="tool" value="' + k + '"> ' + esc(v) + '</div>').join('');
+})();
+document.getElementById('go').onclick = async () => {
+  const msg = document.getElementById('msg');
+  const tool = document.querySelector('input[name=tool]:checked');
+  const body = {
+    name: document.getElementById('team_name').value,
+    category: document.getElementById('category').value,
+    project_title: document.getElementById('project_title').value,
+    description: document.getElementById('description').value,
+    link: document.getElementById('link').value || undefined,
+    members: document.getElementById('members').value.split('\n').map((l) => l.trim()).filter(Boolean).map((n) => ({ name: n })),
+    skill_tracks: [...document.querySelectorAll('input[name=skill]:checked')].map((x) => x.value),
+    tool: tool ? tool.value : null,
+  };
+  try {
+    const d = await api('/teams', 'POST', body);
+    document.getElementById('form').style.display = 'none';
+    document.getElementById('result').innerHTML = '<h1>Team registered</h1><div class="box"><p>Team page: <a href="/team/' + d.team_id + '">' + esc(d.page_url) + '</a></p>' +
+      '<p>QR code (scan to open the team page):</p><img src="/api/teams/' + d.team_id + '/qr.png" width="200" height="200"></div>' +
+      '<p><a href="/projects.html">Go vote for other projects</a></p>';
+  } catch (e) { msg.textContent = e.message; }
+};
+</script>
+</body></html>

@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Admin</title><link rel="stylesheet" href="/style.css"></head>
+<body>
+<div id="nav"></div>
+<h1>Admin</h1>
+
+<div class="box">
+  <h2>Voting</h2>
+  <p id="vstate"></p>
+  <button id="vtoggle">Toggle voting</button>
+</div>
+
+<div class="box">
+  <h2>Create judge / reviewer</h2>
+  <div class="row"><select id="urole"><option value="judge">Judge</option><option value="reviewer">Reviewer</option></select></div>
+  <div class="row"><input id="uname" placeholder="Name"></div>
+  <div class="row"><input id="uemail" placeholder="Email"></div>
+  <div class="row"><input id="upass" placeholder="Password" type="password"></div>
+  <button id="ucreate">Create</button> <span id="umsg"></span>
+</div>
+
+<div class="box">
+  <h2>Robotics ideation</h2>
+  <div class="row">Select top <input id="topn" type="number" value="20" style="width:60px"> <button id="finalize">Finalize</button> <span id="fmsg"></span></div>
+  <table id="rank"></table>
+</div>
+
+<div class="box">
+  <h2>Teams and trial tracks</h2>
+  <p>Click a track to mark it done / not done (5 points each).</p>
+  <table id="teams"></table>
+</div>
+
+<script src="/app.js"></script>
+<script>
+renderNav();
+let cfg, open = true;
+const trackName = (x) => (x.kind === 'tool' ? cfg.TOOLS[x.track] : cfg.SKILL_TRACKS[x.track]);
+
+async function loadOverview() {
+  const d = await api('/admin/overview');
+  open = d.voting_open;
+  vstate.textContent = 'Voting is ' + (open ? 'OPEN' : 'CLOSED');
+  teams.innerHTML = '<tr><th>ID</th><th>Team</th><th>Category</th><th>Status</th><th>Tracks</th></tr>' + d.teams.map((t) =>
+    '<tr><td>' + t.id + '</td><td>' + esc(t.name) + '</td><td>' + t.category + '</td><td>' + t.status + '</td><td>' +
+    t.tracks.map((x) => '<button onclick="mark(' + t.id + ',\'' + x.track + '\',' + !x.completed + ')">' + esc(trackName(x)) + (x.completed ? ' [done]' : '') + '</button>').join(' ') + '</td></tr>').join('');
+}
+async function loadRank() {
+  const d = await api('/robotics/ideation/ranking');
+  rank.innerHTML = '<tr><th>#</th><th>Team</th><th>Avg /25</th><th>Reviews</th><th>Status</th></tr>' +
+    d.ranking.map((r) => '<tr><td>' + r.rank + '</td><td>' + esc(r.name) + '</td><td>' + r.avg_score + '</td><td>' + r.reviews + '</td><td>' + r.status + '</td></tr>').join('');
+}
+async function mark(teamId, track, completed) {
+  try { await api('/admin/teams/' + teamId + '/tracks', 'PATCH', { track, completed }); loadOverview(); } catch (e) { alert(e.message); }
+}
+vtoggle.onclick = async () => { try { await api('/admin/voting', 'PATCH', { open: !open }); loadOverview(); } catch (e) { alert(e.message); } };
+ucreate.onclick = async () => {
+  try {
+    await api('/admin/users', 'POST', { role: urole.value, name: uname.value, email: uemail.value, password: upass.value });
+    umsg.textContent = 'Created';
+  } catch (e) { umsg.textContent = e.message; }
+};
+finalize.onclick = async () => {
+  if (!confirm('This selects the top teams and eliminates the rest. Continue?')) return;
+  try { const d = await api('/robotics/ideation/finalize', 'POST', { top: Number(topn.value) }); fmsg.textContent = d.selected + ' selected, ' + d.eliminated + ' eliminated'; loadRank(); loadOverview(); }
+  catch (e) { fmsg.textContent = e.message; }
+};
+(async () => {
+  try { cfg = await api('/config'); await loadOverview(); await loadRank(); }
+  catch (e) { document.body.insertAdjacentHTML('beforeend', '<p>' + esc(e.message) + ' (login as admin)</p>'); }
+})();
+</script>
+</body></html>
