@@ -18,7 +18,7 @@ Only **team leaders** and **jury** log in and vote. Organizers manage people and
 
 ## Setup
 1. Free sheet access without Google Cloud: sheet -> Extensions -> Apps Script, paste `apps-script/Code.gs`, set SECRET, Deploy as Web app (Execute as: Me, Access: Anyone). Put the URL and SECRET in `.env` (`GOOGLE_SCRIPT_URL`, `GOOGLE_SCRIPT_SECRET`). Alternative: Google Cloud service account (`GOOGLE_SHEET_ID`, `GOOGLE_SERVICE_ACCOUNT_EMAIL`, `GOOGLE_PRIVATE_KEY`).
-2. `cp .env.example .env` and fill it (MONGODB_URI, JWT_SECRET, ADMIN_DELETE_HASH, CORS_ORIGIN...).
+2. `cp .env.example .env` and fill it (MONGODB_URI, JWT_SECRET, ADMIN_DELETE_HASH, CORS_ORIGIN...). For the Falling Sun site, allow `https://fallingsun2026.vercel.app` in `CORS_ORIGIN`.
 3. `npm install && npm start`. Check `GET /api/health`.
 Local test without Google: `LOCAL_SHEET_FILE=./sheet.example.json`.
 
