@@ -33,7 +33,7 @@ app.get('/api', (req, res) => res.json({
     { method: 'GET', path: '/api/auth/me', access: 'authenticated' },
     { method: 'DELETE', path: '/api/admin/users', access: 'admin verification hash', body: '{ "email": "...", "verification_hash": "..." }', note: 'clears the password (forgot password); user registers again with invite_code' },
     { method: 'GET', path: '/api/teams', access: 'public', query: '?category=game|web|robotics' },
-    { method: 'POST', path: '/api/teams', access: 'leader', body: '{ "name": "...", "category": "game|web|robotics", "project_title": "...", "description": "...", "skill_tracks": ["..."], "tool": "...", "members": [{ "name": "..." }], "link": "https://..." }' },
+    { method: 'POST', path: '/api/teams', access: 'leader', body: '{ "name": "...", "category": "game|web|robotics", "project_title": "...", "description": "...", "skill_tracks": ["..."], "tool": "...", "members": [{ "name": "..." }], "link": "https://...", "github_url": "https://github.com/owner/repository" }' },
     { method: 'GET', path: '/api/teams/:id', access: 'public' },
     { method: 'GET', path: '/api/teams/:id/qr.png', access: 'public' },
     { method: 'GET', path: '/api/teams/:id/qr.png/download', access: 'public' },

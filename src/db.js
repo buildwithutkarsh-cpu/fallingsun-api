@@ -16,6 +16,7 @@ const teamSchema = new Schema({
   project_title: { type: String, required: true, trim: true, maxlength: 100 },
   description: { type: String, required: true, maxlength: 2000 },
   link: { type: String, maxlength: 300 },
+  github_url: { type: String, maxlength: 300 },
   status: { type: String, enum: ['active', 'robotics_selected', 'robotics_eliminated', 'transferred'], default: 'active' },
   members: [new Schema({ name: { type: String, required: true } }, { _id: false })], // names only, they do not log in
   // kind 'skill' (4 per team) or 'tool' (1 per team). "completed" comes from the Trial tab of the sheet

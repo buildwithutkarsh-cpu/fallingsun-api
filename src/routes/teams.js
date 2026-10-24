@@ -21,6 +21,12 @@ router.post('/', requireAuth, requireRole('leader'), async (req, res) => {
     link = str(b.link, 'link', 300);
     if (!/^https?:\/\//i.test(link)) throw bad('link must start with http:// or https://');
   }
+  let github_url;
+  if (b.github_url) {
+    github_url = str(b.github_url, 'GitHub repository URL', 300);
+    if (!/^https:\/\/github\.com\/[A-Za-z0-9-]+\/[A-Za-z0-9_.-]+\/?$/i.test(github_url))
+      throw bad('GitHub repository URL must be a public github.com/owner/repository URL');
+  }
   const skills = Array.isArray(b.skill_tracks) ? [...new Set(b.skill_tracks)] : [];
   if (skills.length !== C.SKILL_TRACKS_PER_TEAM || !skills.every((t) => C.SKILL_TRACKS[t]))
     throw bad(`pick exactly ${C.SKILL_TRACKS_PER_TEAM} different skill tracks`);
@@ -32,7 +38,7 @@ router.post('/', requireAuth, requireRole('leader'), async (req, res) => {
   let team;
   try {
     team = await Team.create({
-      name, leader: req.user.id, category: b.category, project_title, description, link, members,
+      name, leader: req.user.id, category: b.category, project_title, description, link, github_url, members,
       tracks: [...skills.map((t) => ({ kind: 'skill', track: t })), { kind: 'tool', track: b.tool }],
     });
   } catch (e) {
@@ -76,7 +82,7 @@ router.get('/:id', async (req, res) => {
   if (!t) throw new HttpError(404, 'Team not found');
   res.json({
     id: String(t._id), name: t.name, category: t.category, project_title: t.project_title,
-    description: t.description, link: t.link || null, status: t.status,
+    description: t.description, link: t.link || null, github_url: t.github_url || null, status: t.status,
     members: [{ name: t.leader?.name || 'Leader', role: 'leader' }, ...t.members.map((m) => ({ name: m.name, role: 'member' }))],
     tracks: t.tracks,
   });

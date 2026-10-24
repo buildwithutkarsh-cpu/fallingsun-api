@@ -24,7 +24,7 @@ Local test without Google: `LOCAL_SHEET_FILE=./sheet.example.json`.
 
 ## Flow
 1. Person gets email + invite code from organizers -> `POST /api/auth/register` (once) -> token. Later `POST /api/auth/login`.
-2. Leader `POST /api/teams` (once). Response has `team_url`; `GET /api/teams/:id/qr.png` is the QR and opens the customized public project page at `FRONTEND_URL/team/:id`.
+2. Leader `POST /api/teams` (once), optionally including a public `github_url` (`https://github.com/owner/repository`). Response has `team_url`; `GET /api/teams/:id/qr.png` is the QR and opens the customized public project page at `FRONTEND_URL/team/:id`. Eligible logged-in leaders and jury can submit ratings from that page while voting is open.
 3. Leaders and jury `POST /api/votes`; jury also `POST /api/votes/presentation`.
 4. `GET /api/leaderboard`.
 5. Robotics: jury scores ideation, then `npm run robotics:finalize -- 20`; eliminated leaders `POST /api/teams/me/transfer`.
