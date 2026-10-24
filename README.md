@@ -32,8 +32,8 @@ The URL alone returns nothing without the secret, so the sheet stays private. Af
 No Google yet? Set `LOCAL_SHEET_FILE=./sheet.example.json` to test with a local file.
 
 ## Flow
-1. Leader creates an account using their sheet-listed email and a password -> logs in -> fills the registration form once -> team page `/team/:id` + QR code.
-2. Leaders and jury vote on `/team/:id`. Jury also gives the 0-5 presentation score.
+1. Leader creates an account using their sheet-listed email and a password -> logs in -> submits team details to `POST /api/teams`.
+2. Clients fetch team details from `GET /api/teams/:id` and can use its QR image endpoint. Leaders and jury submit votes through the API.
 3. `/leaderboard.html` shows the result.
 4. Robotics: jury scores the ideation round, then run `npm run robotics:finalize -- 20`
    (top 20 selected, rest can transfer to web/game from the Projects page).
@@ -52,9 +52,24 @@ No Google yet? Set `LOCAL_SHEET_FILE=./sheet.example.json` to test with a local 
 Trial 25 (5 per completed track) + Jury presentation 25 + Jury rating 25 + Leaders' vote 25.
 
 ## API
-POST /api/auth/register {email, password} (one-time password setup for an active sheet-listed account), POST /api/auth/login {email, password}, GET /api/auth/me, GET /api/health
-POST /api/teams (leader), GET /api/teams, GET /api/teams/:id, GET /api/teams/:id/qr.png, POST /api/teams/me/transfer
-POST /api/votes {team_id, scores[5]}, GET /api/votes/mine
-POST /api/votes/presentation {team_id, score} (jury), GET /api/votes/presentation/mine
-POST /api/robotics/ideation (jury), GET /api/robotics/ideation/ranking (jury)
-GET /api/leaderboard?category=
+The service is API-only. `GET /` identifies the service, and `GET /api` lists endpoints and access requirements. Send JSON request bodies with `Content-Type: application/json`; after login, send `Authorization: Bearer <token>` for authenticated endpoints. Responses and errors are JSON except the QR endpoint, which returns a PNG.
+
+| Method | Endpoint | Access | Description |
+|---|---|---|---|
+| GET | `/api/health` | Public | Service and sheet-sync health |
+| GET | `/api/config` | Public | Categories, tracks, and voting criteria |
+| POST | `/api/auth/register` | Public | Set the initial password for an active sheet-listed account (`{email, password}`) |
+| POST | `/api/auth/login` | Public | Login (`{email, password}`), returns token and user |
+| GET | `/api/auth/me` | Authenticated | Current user and team |
+| GET | `/api/teams?category=game` | Public | List teams, optionally filtered by category |
+| POST | `/api/teams` | Leader | Register a team |
+| GET | `/api/teams/:id` | Public | Team details |
+| GET | `/api/teams/:id/qr.png` | Public | QR code pointing to the team API resource |
+| POST | `/api/teams/me/transfer` | Leader | Transfer an eliminated robotics team to web/game |
+| POST | `/api/votes` | Leader or jury | Create/update a project vote (`{team_id, scores}`) |
+| GET | `/api/votes/mine` | Leader or jury | Current user's project votes |
+| POST | `/api/votes/presentation` | Jury | Create/update a presentation score (`{team_id, score}`) |
+| GET | `/api/votes/presentation/mine` | Jury | Current user's presentation scores |
+| POST | `/api/robotics/ideation` | Jury | Create/update robotics ideation scores |
+| GET | `/api/robotics/ideation/ranking` | Jury | Robotics ideation ranking and criteria |
+| GET | `/api/leaderboard?category=game` | Public | Leaderboard, optionally filtered by category |

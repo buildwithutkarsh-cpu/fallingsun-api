@@ -1,7 +1,6 @@
 require('dotenv').config();
 require('express-async-errors'); // lets async route handlers throw errors safely
 const express = require('express');
-const path = require('path');
 const rateLimit = require('express-rate-limit');
 const db = require('./src/db');
 const C = require('./src/config');
@@ -14,6 +13,34 @@ if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
 const app = express();
 app.set('trust proxy', 1);
 app.use(express.json({ limit: '50kb' }));
+
+app.get('/', (req, res) => res.json({
+  service: 'Hackathon Voting API',
+  docs: `${req.protocol}://${req.get('host')}/api`,
+  health: `${req.protocol}://${req.get('host')}/api/health`,
+}));
+app.get('/api', (req, res) => res.json({
+  authentication: 'Send the login token as Authorization: Bearer <token>.',
+  endpoints: [
+    { method: 'GET', path: '/api/health', access: 'public' },
+    { method: 'GET', path: '/api/config', access: 'public' },
+    { method: 'POST', path: '/api/auth/register', access: 'public', body: '{ "email": "...", "password": "..." }' },
+    { method: 'POST', path: '/api/auth/login', access: 'public', body: '{ "email": "...", "password": "..." }' },
+    { method: 'GET', path: '/api/auth/me', access: 'authenticated' },
+    { method: 'GET', path: '/api/teams', access: 'public', query: '?category=game|web|robotics' },
+    { method: 'POST', path: '/api/teams', access: 'leader', body: '{ "name": "...", "category": "game|web|robotics", "project_title": "...", "description": "...", "skill_tracks": ["..."], "tool": "...", "members": [{ "name": "..." }], "link": "https://..." }' },
+    { method: 'GET', path: '/api/teams/:id', access: 'public' },
+    { method: 'GET', path: '/api/teams/:id/qr.png', access: 'public' },
+    { method: 'POST', path: '/api/teams/me/transfer', access: 'leader', body: '{ "category": "web|game" }' },
+    { method: 'POST', path: '/api/votes', access: 'leader or jury', body: '{ "team_id": "...", "scores": [0, 1, 2, 3, 4] }' },
+    { method: 'GET', path: '/api/votes/mine', access: 'leader or jury' },
+    { method: 'POST', path: '/api/votes/presentation', access: 'jury', body: '{ "team_id": "...", "score": 0 }' },
+    { method: 'GET', path: '/api/votes/presentation/mine', access: 'jury' },
+    { method: 'POST', path: '/api/robotics/ideation', access: 'jury', body: '{ "team_id": "...", "scores": [0, 1, 2, 3, 4] }' },
+    { method: 'GET', path: '/api/robotics/ideation/ranking', access: 'jury' },
+    { method: 'GET', path: '/api/leaderboard', access: 'public', query: '?category=game|web|robotics' },
+  ],
+}));
 
 app.get('/api/config', (req, res) =>
   res.json({
@@ -41,10 +68,7 @@ app.use('/api/teams', require('./src/routes/teams'));
 app.use('/api/votes', rateLimit({ windowMs: 60 * 1000, max: 120 }), require('./src/routes/votes'));
 app.use('/api/leaderboard', require('./src/routes/leaderboard'));
 app.use('/api/robotics', require('./src/routes/robotics'));
-app.use('/api', (req, res) => res.status(404).json({ error: 'Not found' }));
-
-app.get('/team/:id', (req, res) => res.sendFile(path.join(__dirname, 'public', 'team.html')));
-app.use(express.static(path.join(__dirname, 'public')));
+app.use((req, res) => res.status(404).json({ error: 'Not found' }));
 
 app.use((err, req, res, next) => {
   if (err.type === 'entity.parse.failed') return res.status(400).json({ error: 'Invalid JSON' });

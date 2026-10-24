@@ -46,7 +46,7 @@ router.post('/', requireAuth, requireRole('leader'), async (req, res) => {
   }
   res.status(201).json({
     team_id: String(team._id),
-    page_url: `${baseUrl(req)}/team/${team._id}`,
+    team_url: `${baseUrl(req)}/api/teams/${team._id}`,
     qr_url: `${baseUrl(req)}/api/teams/${team._id}/qr.png`,
   });
 });
@@ -84,7 +84,7 @@ router.get('/:id', async (req, res) => {
 router.get('/:id/qr.png', async (req, res) => {
   const id = objectId(req.params.id, 'team id');
   if (!(await Team.exists({ _id: id }))) throw new HttpError(404, 'Team not found');
-  const png = await QRCode.toBuffer(`${baseUrl(req)}/team/${id}`, {
+  const png = await QRCode.toBuffer(`${baseUrl(req)}/api/teams/${id}`, {
     width: 320, margin: 2, color: { dark: '#000000', light: '#ffffff' },
   });
   res.type('png').send(png);
