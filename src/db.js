@@ -34,7 +34,6 @@ const userSchema = new Schema({
   email: { type: String, required: true, unique: true, lowercase: true, trim: true },
   role: { type: String, enum: ['leader', 'jury'], required: true },
   active: { type: Boolean, default: true }, // false when removed from the sheet
-  admin_removed: { type: Boolean, default: false },
   team: { type: Schema.Types.ObjectId, ref: 'Team', default: null },
   password_hash: { type: String, select: false },
 }, opts);

@@ -106,20 +106,12 @@ async function syncFromSheet() {
   const ops = wanted.map((w) => ({
     updateOne: {
       filter: { email: w.email },
-      update: { $set: { name: w.name, role: w.role }, $setOnInsert: { active: true } },
+      update: { $set: { name: w.name, role: w.role, active: true } },
       upsert: true,
     },
   }));
   await User.bulkWrite(ops);
-  const wantedEmails = wanted.map((w) => w.email);
-  await User.updateMany(
-    { email: { $in: wantedEmails }, admin_removed: { $ne: true } },
-    { $set: { active: true } }
-  );
-  const removed = await User.updateMany(
-    { email: { $nin: wantedEmails }, active: true, admin_removed: { $ne: true } },
-    { $set: { active: false } }
-  );
+  const removed = await User.updateMany({ email: { $nin: wanted.map((w) => w.email) }, active: true }, { $set: { active: false } });
 
   // Settings tab: key | value  (voting_open, voting_opens_at, voting_closes_at)
   for (const r of tabs.Settings || []) {

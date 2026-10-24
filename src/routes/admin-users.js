@@ -19,11 +19,11 @@ router.delete('/', async (req, res) => {
 
   const userEmail = email(req.body?.email);
   const result = await User.updateOne(
-    { email: userEmail },
-    { $set: { active: false, admin_removed: true } }
+    { email: userEmail, active: true },
+    { $unset: { password_hash: 1 } }
   );
-  if (!result.matchedCount) throw new HttpError(404, 'User not found');
-  res.json({ ok: true, email: userEmail });
+  if (!result.matchedCount) throw new HttpError(404, 'Active user not found');
+  res.json({ ok: true, email: userEmail, password_reset: true });
 });
 
 module.exports = router;

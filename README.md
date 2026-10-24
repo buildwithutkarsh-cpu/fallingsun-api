@@ -46,7 +46,7 @@ No Google yet? Set `LOCAL_SHEET_FILE=./sheet.example.json` to test with a local 
 - Voting only while open (Settings tab / time window).
 - Every vote create/edit is written to the `voteaudits` collection.
 - Accounts removed from the sheet are deactivated immediately on next sync; tokens expire after 6h.
-- Admins can deactivate an account with `DELETE /api/admin/users` using its email and the `ADMIN_DELETE_HASH` verification value. This account stays disabled even if its email remains on the sheet.
+- For a forgotten password, an admin can clear an active account's password with `DELETE /api/admin/users` using its email and the `ADMIN_DELETE_HASH` verification value. The user can then set a new password through registration.
 - A broken or empty sheet never wipes the existing accounts.
 
 ## Score (100)
@@ -59,10 +59,10 @@ The service is API-only. `GET /` identifies the service, and `GET /api` lists en
 |---|---|---|---|
 | GET | `/api/health` | Public | Service and sheet-sync health |
 | GET | `/api/config` | Public | Categories, tracks, and voting criteria |
-| POST | `/api/auth/register` | Public | Set the initial password for an active sheet-listed account (`{email, password}`) |
+| POST | `/api/auth/register` | Public | Set an initial password or a new password after an admin reset (`{email, password}`) |
 | POST | `/api/auth/login` | Public | Login (`{email, password}`), returns token and user |
 | GET | `/api/auth/me` | Authenticated | Current user and team |
-| DELETE | `/api/admin/users` | Admin verification hash | Deactivate an account (`{email, verification_hash}`) |
+| DELETE | `/api/admin/users` | Admin verification hash | Clear an active user's password for password reset (`{email, verification_hash}`) |
 | GET | `/api/teams?category=game` | Public | List teams, optionally filtered by category |
 | POST | `/api/teams` | Leader | Register a team |
 | GET | `/api/teams/:id` | Public | Team details |
@@ -76,4 +76,4 @@ The service is API-only. `GET /` identifies the service, and `GET /api` lists en
 | GET | `/api/robotics/ideation/ranking` | Jury | Robotics ideation ranking and criteria |
 | GET | `/api/leaderboard?category=game` | Public | Leaderboard, optionally filtered by category |
 
-Set `ADMIN_DELETE_HASH` on the server to a long, randomly generated secret. Only admins should know this value; send it as `verification_hash` over HTTPS. User removal deactivates the account without deleting its voting history.
+Set `ADMIN_DELETE_HASH` on the server to a long, randomly generated secret. Only admins should know this value; send it as `verification_hash` over HTTPS. To reset a forgotten password, send `DELETE /api/admin/users` with `{ "email": "...", "verification_hash": "..." }`. This clears only the password hash; it does not delete or deactivate the user, team, or voting history. The user can then use `POST /api/auth/register` to set a new password.
