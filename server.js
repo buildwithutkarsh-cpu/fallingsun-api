@@ -27,6 +27,7 @@ app.get('/api', (req, res) => res.json({
     { method: 'POST', path: '/api/auth/register', access: 'public', body: '{ "email": "...", "password": "..." }' },
     { method: 'POST', path: '/api/auth/login', access: 'public', body: '{ "email": "...", "password": "..." }' },
     { method: 'GET', path: '/api/auth/me', access: 'authenticated' },
+    { method: 'DELETE', path: '/api/admin/users', access: 'admin verification hash', body: '{ "email": "...", "verification_hash": "..." }' },
     { method: 'GET', path: '/api/teams', access: 'public', query: '?category=game|web|robotics' },
     { method: 'POST', path: '/api/teams', access: 'leader', body: '{ "name": "...", "category": "game|web|robotics", "project_title": "...", "description": "...", "skill_tracks": ["..."], "tool": "...", "members": [{ "name": "..." }], "link": "https://..." }' },
     { method: 'GET', path: '/api/teams/:id', access: 'public' },
@@ -64,6 +65,10 @@ app.use('/api/auth/register', rateLimit({
   handler: (req, res) => res.status(429).json({ error: 'Too many registration attempts. Try again later.' }),
 }));
 app.use('/api/auth', require('./src/routes/auth'));
+app.use('/api/admin/users', rateLimit({
+  windowMs: 15 * 60 * 1000, max: 5,
+  handler: (req, res) => res.status(429).json({ error: 'Too many user removal attempts. Try again later.' }),
+}), require('./src/routes/admin-users'));
 app.use('/api/teams', require('./src/routes/teams'));
 app.use('/api/votes', rateLimit({ windowMs: 60 * 1000, max: 120 }), require('./src/routes/votes'));
 app.use('/api/leaderboard', require('./src/routes/leaderboard'));
