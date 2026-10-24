@@ -1,9 +1,10 @@
 const router = require('express').Router();
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 const { User, Team } = require('../db');
 const { sign, requireAuth } = require('../middleware/auth');
-const { syncIfStale } = require('../services/sheets');
-const { HttpError, email, password } = require('../utils');
+const { syncIfStale, hashInvite } = require('../services/sheets');
+const { HttpError, email, password, str } = require('../utils');
 
 const DUMMY_PASSWORD_HASH = bcrypt.hashSync('not-a-real-user-password', 12);
 
@@ -11,22 +12,41 @@ function authenticated(u) {
   return { token: sign(u), user: { id: String(u._id), name: u.name, role: u.role } };
 }
 
-// Only active accounts from the Leaders/Jury sheet can enroll, and enrollment cannot reset a password.
+// First-time account setup. The email must be on the sheet AND the person must know the invite_code
+// the organizers put next to their email, so knowing someone's email is not enough to claim the account.
+const MAX_FAILS = 5, LOCK_MS = 15 * 60 * 1000;
+const NOT_ELIGIBLE = 'Email or invite code is incorrect';
+
+async function registerFailed(u) {
+  const after = await User.findOneAndUpdate({ _id: u._id }, { $inc: { register_failures: 1 } }, { new: true });
+  if (after.register_failures >= MAX_FAILS)
+    await User.updateOne({ _id: u._id }, { $set: { register_failures: 0, register_locked_until: new Date(Date.now() + LOCK_MS) } });
+}
+
 router.post('/register', async (req, res) => {
   const e = email(req.body?.email);
   const p = password(req.body?.password);
+  const code = str(typeof req.body?.invite_code === 'string' ? req.body.invite_code : '', 'invite_code', 100);
   await syncIfStale(10000);
 
-  const u = await User.findOne({ email: e, active: true }).select('+password_hash');
-  if (!u) throw new HttpError(403, 'This email is not an active leader or jury account');
-  if (u.password_hash) throw new HttpError(409, 'A password is already set for this account');
+  const u = await User.findOne({ email: e, active: true }).select('+password_hash +invite_hash');
+  if (!u || !u.invite_hash) throw new HttpError(403, NOT_ELIGIBLE); // unknown email, or organizers gave no invite code
+  if (u.register_locked_until && u.register_locked_until > new Date())
+    throw new HttpError(429, 'Too many wrong invite codes. Try again in a few minutes.');
+
+  const given = Buffer.from(hashInvite(code), 'hex'), real = Buffer.from(u.invite_hash, 'hex');
+  if (given.length !== real.length || !crypto.timingSafeEqual(given, real)) {
+    await registerFailed(u);
+    throw new HttpError(403, NOT_ELIGIBLE);
+  }
+  if (u.password_hash) throw new HttpError(409, 'A password is already set for this account. Log in instead.');
 
   const passwordHash = await bcrypt.hash(p, 12);
   const result = await User.updateOne(
     { _id: u._id, active: true, password_hash: { $exists: false } },
-    { $set: { password_hash: passwordHash } }
+    { $set: { password_hash: passwordHash, register_failures: 0, register_locked_until: null } }
   );
-  if (!result.modifiedCount) throw new HttpError(409, 'A password is already set for this account');
+  if (!result.modifiedCount) throw new HttpError(409, 'A password is already set for this account. Log in instead.');
   res.status(201).json(authenticated(u));
 });
 

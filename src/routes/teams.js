@@ -6,6 +6,8 @@ const { requireAuth, requireRole } = require('../middleware/auth');
 const { HttpError, bad, str, objectId, isUniqueError } = require('../utils');
 
 const baseUrl = (req) => process.env.BASE_URL || `${req.protocol}://${req.get('host')}`;
+// If a separate frontend exists (FRONTEND_URL), the QR opens its team page, otherwise the API JSON of the team
+const teamLink = (req, id) => (process.env.FRONTEND_URL ? `${process.env.FRONTEND_URL.replace(/\/$/, '')}/team/${id}` : `${baseUrl(req)}/api/teams/${id}`);
 
 // Registration form. Only a logged-in leader (from the sheet) can fill it, once.
 router.post('/', requireAuth, requireRole('leader'), async (req, res) => {
@@ -46,7 +48,7 @@ router.post('/', requireAuth, requireRole('leader'), async (req, res) => {
   }
   res.status(201).json({
     team_id: String(team._id),
-    team_url: `${baseUrl(req)}/api/teams/${team._id}`,
+    team_url: teamLink(req, team._id),
     qr_url: `${baseUrl(req)}/api/teams/${team._id}/qr.png`,
   });
 });
@@ -84,7 +86,7 @@ router.get('/:id', async (req, res) => {
 router.get('/:id/qr.png', async (req, res) => {
   const id = objectId(req.params.id, 'team id');
   if (!(await Team.exists({ _id: id }))) throw new HttpError(404, 'Team not found');
-  const png = await QRCode.toBuffer(`${baseUrl(req)}/api/teams/${id}`, {
+  const png = await QRCode.toBuffer(teamLink(req, id), {
     width: 320, margin: 2, color: { dark: '#000000', light: '#ffffff' },
   });
   res.type('png').send(png);

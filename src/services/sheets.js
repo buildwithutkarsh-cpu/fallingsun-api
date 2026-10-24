@@ -1,5 +1,6 @@
 const fs = require('fs');
 const { GoogleAuth } = require('google-auth-library');
+const crypto = require('crypto');
 const C = require('../config');
 const { User, Team, Setting } = require('../db');
 
@@ -7,6 +8,8 @@ const API = 'https://sheets.googleapis.com/v4/spreadsheets';
 const REQUIRED = ['Leaders', 'Jury'];
 const OPTIONAL = ['Trial', 'Settings'];
 
+// Invite codes are compared case-insensitively and stored only as a hash
+const hashInvite = (code) => crypto.createHash('sha256').update(String(code).trim().toLowerCase()).digest('hex');
 const norm = (s) => String(s || '').trim().toLowerCase().replace(/[\s-]+/g, '_');
 const truthy = (v) => /^(true|yes|y|1|done|completed)$/i.test(String(v || '').trim());
 
@@ -93,8 +96,10 @@ async function syncFromSheet() {
       if (!email) continue;
       if (!/^\S+@\S+\.\S+$/.test(email)) { skipped.push(`${email}: invalid email`); continue; }
       if (seen.has(email)) { skipped.push(`${email}: duplicate (kept the first one)`); continue; }
+      const invite = (r.invite_code || '').trim();
+      if (invite && invite.length < 6) { skipped.push(`${email}: invite_code must be at least 6 characters (ignored)`); }
       seen.add(email);
-      wanted.push({ email, role, name: (r.name || email.split('@')[0]).trim() });
+      wanted.push({ email, role, name: (r.name || email.split('@')[0]).trim(), invite: invite.length >= 6 ? invite : '' });
     }
   };
   take(tabs.Leaders, 'leader');
@@ -106,7 +111,10 @@ async function syncFromSheet() {
   const ops = wanted.map((w) => ({
     updateOne: {
       filter: { email: w.email },
-      update: { $set: { name: w.name, role: w.role, active: true } },
+      update: {
+        $set: { name: w.name, role: w.role, active: true, ...(w.invite ? { invite_hash: hashInvite(w.invite) } : {}) },
+        ...(w.invite ? {} : { $unset: { invite_hash: '' } }),
+      },
       upsert: true,
     },
   }));
@@ -157,4 +165,4 @@ async function syncIfStale(maxAgeMs) {
   try { await sync(); } catch (e) { /* login will just fail normally */ }
 }
 
-module.exports = { sync, syncIfStale, getLastSync: () => lastSync, recordsFromValues };
+module.exports = { hashInvite, sync, syncIfStale, getLastSync: () => lastSync, recordsFromValues };

@@ -36,6 +36,10 @@ const userSchema = new Schema({
   active: { type: Boolean, default: true }, // false when removed from the sheet
   team: { type: Schema.Types.ObjectId, ref: 'Team', default: null },
   password_hash: { type: String, select: false },
+  invite_hash: { type: String, select: false },   // sha256 of the "invite_code" column in the sheet
+  token_version: { type: Number, default: 0 },    // bumped on password reset so old tokens stop working
+  register_failures: { type: Number, default: 0 },
+  register_locked_until: { type: Date, default: null },
 }, opts);
 
 // NOTE: no default on "submissions" - it is managed with $inc during upsert

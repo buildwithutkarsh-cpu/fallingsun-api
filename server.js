@@ -1,17 +1,21 @@
 require('dotenv').config();
 require('express-async-errors'); // lets async route handlers throw errors safely
 const express = require('express');
+const cors = require('cors');
 const rateLimit = require('express-rate-limit');
 const db = require('./src/db');
 const C = require('./src/config');
 const { sync, getLastSync } = require('./src/services/sheets');
 
 if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
-  console.error('Se  t JWT_SECRET in production'); process.exit(1);
+  console.error('Set JWT_SECRET in production'); process.exit(1);
 }
 
 const app = express();
 app.set('trust proxy', 1);
+// CORS: set CORS_ORIGIN=https://your-frontend.com (comma separated). Unset = open in dev, closed in production.
+const origins = (process.env.CORS_ORIGIN || '').split(',').map((o) => o.trim()).filter(Boolean);
+app.use(cors({ origin: origins.length ? origins : process.env.NODE_ENV !== 'production' }));
 app.use(express.json({ limit: '50kb' }));
 
 app.get('/', (req, res) => res.json({
@@ -24,10 +28,10 @@ app.get('/api', (req, res) => res.json({
   endpoints: [
     { method: 'GET', path: '/api/health', access: 'public' },
     { method: 'GET', path: '/api/config', access: 'public' },
-    { method: 'POST', path: '/api/auth/register', access: 'public', body: '{ "email": "...", "password": "..." }' },
+    { method: 'POST', path: '/api/auth/register', access: 'public', body: '{ "email": "...", "password": "...", "invite_code": "..." }', note: 'first-time setup, needs the invite_code from the organizers' },
     { method: 'POST', path: '/api/auth/login', access: 'public', body: '{ "email": "...", "password": "..." }' },
     { method: 'GET', path: '/api/auth/me', access: 'authenticated' },
-    { method: 'DELETE', path: '/api/admin/users', access: 'admin verification hash', body: '{ "email": "...", "verification_hash": "..." }' },
+    { method: 'DELETE', path: '/api/admin/users', access: 'admin verification hash', body: '{ "email": "...", "verification_hash": "..." }', note: 'clears the password (forgot password); user registers again with invite_code' },
     { method: 'GET', path: '/api/teams', access: 'public', query: '?category=game|web|robotics' },
     { method: 'POST', path: '/api/teams', access: 'leader', body: '{ "name": "...", "category": "game|web|robotics", "project_title": "...", "description": "...", "skill_tracks": ["..."], "tool": "...", "members": [{ "name": "..." }], "link": "https://..." }' },
     { method: 'GET', path: '/api/teams/:id', access: 'public' },
