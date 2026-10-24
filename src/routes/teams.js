@@ -83,13 +83,28 @@ router.get('/:id', async (req, res) => {
   });
 });
 
-router.get('/:id/qr.png', async (req, res) => {
+async function getTeamQr(req, format) {
   const id = objectId(req.params.id, 'team id');
   if (!(await Team.exists({ _id: id }))) throw new HttpError(404, 'Team not found');
-  const png = await QRCode.toBuffer(teamLink(req, id), {
-    width: 320, margin: 2, color: { dark: '#000000', light: '#ffffff' },
-  });
+  const options = { width: 320, margin: 2, color: { dark: '#000000', light: '#ffffff' } };
+  return format === 'svg'
+    ? QRCode.toString(teamLink(req, id), { ...options, type: 'svg' })
+    : QRCode.toBuffer(teamLink(req, id), options);
+}
+
+router.get('/:id/qr.png', async (req, res) => {
+  const png = await getTeamQr(req, 'png');
   res.type('png').send(png);
+});
+
+router.get('/:id/qr.png/download', async (req, res) => {
+  const png = await getTeamQr(req, 'png');
+  res.attachment(`team-${req.params.id}-qr.png`).send(png);
+});
+
+router.get('/:id/qr.svg', async (req, res) => {
+  const svg = await getTeamQr(req, 'svg');
+  res.attachment(`team-${req.params.id}-qr.svg`).type('image/svg+xml').send(svg);
 });
 
 module.exports = router;

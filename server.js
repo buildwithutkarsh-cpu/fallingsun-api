@@ -36,6 +36,8 @@ app.get('/api', (req, res) => res.json({
     { method: 'POST', path: '/api/teams', access: 'leader', body: '{ "name": "...", "category": "game|web|robotics", "project_title": "...", "description": "...", "skill_tracks": ["..."], "tool": "...", "members": [{ "name": "..." }], "link": "https://..." }' },
     { method: 'GET', path: '/api/teams/:id', access: 'public' },
     { method: 'GET', path: '/api/teams/:id/qr.png', access: 'public' },
+    { method: 'GET', path: '/api/teams/:id/qr.png/download', access: 'public' },
+    { method: 'GET', path: '/api/teams/:id/qr.svg', access: 'public' },
     { method: 'POST', path: '/api/teams/me/transfer', access: 'leader', body: '{ "category": "web|game" }' },
     { method: 'POST', path: '/api/votes', access: 'leader or jury', body: '{ "team_id": "...", "scores": [0, 1, 2, 3, 4] }' },
     { method: 'GET', path: '/api/votes/mine', access: 'leader or jury' },
